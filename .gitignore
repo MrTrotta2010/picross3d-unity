@@ -1,17 +1,25 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
+# Build, Release and User Settings
+Obj/
+UserSettings/
+Build/
 
 # Other files and folders
 .settings/
+
+# Visual Studio files
+.vsconfig
+.csproj
+.sln
 
 # Executables
 *.swf
 *.air
 *.ipa
 *.apk
+*.exe
+
+# Unity Meta files
+*.meta
 
 # Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
 # should NOT be excluded as they contain compiler settings and other important
