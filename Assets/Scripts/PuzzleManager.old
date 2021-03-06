@@ -1,0 +1,153 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PuzzleManager : MonoBehaviour
+{
+    // Destaca os blocos que fazem parte da solução do puzzle
+    public bool highlightCorrectBlocks = false;
+
+    private int[][][] puzzleSolutionMatrix;
+    private Vector3 puzzleDimensions;
+    private Vector3 puzzleOrigin;
+
+    private void Awake()
+    {
+        // Recupera o centro do puzzle
+        puzzleOrigin = transform.localPosition;
+        Debug.Log("Origem: " + puzzleOrigin);
+
+        // Recupera todos os cubos do puzzle
+        Transform[] cubes = new Transform[transform.childCount];
+        Debug.Log(cubes.Length + " usados na solução");
+
+        // Atualiza as altura, larguras e profundidades mínimas e máximas
+        puzzleDimensions = CalculatePuzzleDimensions(cubes);
+        Debug.Log("Dimensões: " + puzzleDimensions);
+
+        // Aloca a matriz de solução do puzzle
+        puzzleSolutionMatrix = AllocatePuzzleMatrix(puzzleDimensions);
+
+        // Preenche a matriz de solução do puzzle
+        FillOutSolutionMatrix(cubes);
+
+        PrintMatrixLayer(0);
+    }
+
+    // Calcula as dimensões do puzzle
+    private Vector3 CalculatePuzzleDimensions(Transform[] cubes)
+    {
+        float minHeight = 0, minWidth = 0, minDepth = 0;
+        float maxHeight = 0, maxWidth = 0, maxDepth = 0;
+
+        for (int i = 0; i < cubes.Length; i++)
+        {
+            cubes[i] = transform.GetChild(i);
+
+            if (cubes[i].position.y > maxHeight) maxHeight = cubes[i].position.y;
+            if (cubes[i].position.y < minHeight) minHeight = cubes[i].position.y;
+            if (cubes[i].position.x > maxWidth) maxWidth = cubes[i].position.x;
+            if (cubes[i].position.x < minWidth) minWidth = cubes[i].position.x;
+            if (cubes[i].position.z > maxDepth) maxDepth = cubes[i].position.z;
+            if (cubes[i].position.z < minDepth) minDepth = cubes[i].position.z;
+        }
+
+        return new Vector3(maxWidth - minWidth + 1, maxHeight - minHeight + 1, maxDepth - minDepth + 1);
+    }
+
+    // Aloca a matriz tridimensional que contém a solução do puzzle
+    private int[][][] AllocatePuzzleMatrix(Vector3 puzzleDimensions)
+    {
+        int[][][] matrix = new int[(int)puzzleDimensions.z][][];
+        for (int i = 0; i < puzzleDimensions.z; i++)
+        {
+            matrix[i] = new int[(int)puzzleDimensions.y][];
+            for (int j = 0; j < puzzleDimensions.y; j++)
+            {
+                matrix[i][j] = new int[(int)puzzleDimensions.x];
+                for (int k = 0; k < puzzleDimensions.x; k++)
+                {
+                    matrix[i][j][k] = 0;
+                }
+            }
+        }
+        return matrix;
+    }
+
+    // Atribui cada um dos cubos pré-existentes a uma posição da matriz tridimensional e os torna parte da solução
+    private void FillOutSolutionMatrix(Transform[] cubes)
+    {
+        for (int i = 0; i < cubes.Length; i++)
+        {
+            // Torna o cubo parte da solução
+            cubes[i].GetComponent<Cube>().SetPartOfSolution(true);
+            // Calcula a posição do cubo na matriz de solução
+            Vector3 matrixPosition = TransformPositionToMatrixPosition(cubes[i].localPosition);
+            Debug.Log(cubes[i].gameObject.name + ": " + cubes[i].localPosition + " => " + matrixPosition);
+            puzzleSolutionMatrix[(int)matrixPosition.z][(int)matrixPosition.y][(int)matrixPosition.x] = 1;
+        }
+    }
+
+    private Vector3 TransformPositionToMatrixPosition(Vector3 position)
+    {
+        float xPosition, yPosition, zPosition;
+
+        // Posição x se a dimensão x do puzzle for par ou ímpar
+        if (puzzleDimensions.x % 2 == 0)
+        {
+            xPosition = position.x + (puzzleDimensions.x / 2) - 1;
+        }
+        else
+        {
+            xPosition = position.x + ((puzzleDimensions.x - 1) / 2);
+        }
+        // Posição y se a dimensão y do puzzle for par ou ímpar
+        if (puzzleDimensions.y % 2 == 0)
+        {
+            yPosition = Mathf.Abs(position.y - (puzzleDimensions.y / 2)) - 1;
+        }
+        else
+        {
+            yPosition = Mathf.Abs(position.y - ((puzzleDimensions.y - 1) / 2));
+        }
+        // Posição z se a dimensão z do puzzle for par ou ímpar
+        if (puzzleDimensions.z % 2 == 0)
+        {
+            zPosition = Mathf.Abs(position.z - (puzzleDimensions.z / 2)) - 1;
+        }
+        else
+        {
+            zPosition = Mathf.Abs(position.z - ((puzzleDimensions.z - 1) / 2));
+        }
+
+        return new Vector3(xPosition, yPosition, zPosition);
+    }
+
+    private void PrintMatrixLayer(int layer)
+    {
+        string str = "[";
+        for (int i = 0; i < puzzleDimensions.y; i++)
+        {
+            for (int j = 0; j < puzzleDimensions.x; j++)
+            {
+                str += puzzleSolutionMatrix[layer][i][j];
+                if (j < puzzleDimensions.x - 1)
+                {
+                    str += ", ";
+                }
+                else
+                {
+                    if (i < puzzleDimensions.y - 1)
+                    {
+                        str += "]\n[";
+                    }
+                    else
+                    {
+                        str += "]";
+                    }
+                }
+            }
+        }
+        Debug.Log(str);
+    }
+}
