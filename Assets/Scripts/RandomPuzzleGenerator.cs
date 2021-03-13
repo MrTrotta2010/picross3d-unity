@@ -2,13 +2,14 @@ using UnityEngine;
 
 public class RandomPuzzleGenerator : MonoBehaviour
 {
-    [Header("Puzzle dimensions")]
-    // As dimensões do puzzle a ser gerado
-    [SerializeField] private int layers = 0;
-    [SerializeField] private int lines = 0;
-    [SerializeField] private int columns = 0;
+    // Maior dimensão possível
+    [SerializeField] private int maxDimension = 8;
 
-    [Header("Puzzle manager")]
+    // As dimensões do puzzle a ser gerado
+    private int layers = 3;
+    private int lines = 3;
+    private int columns = 3;
+
     // Referência a um PuzzleManager
     [SerializeField] PuzzleManager puzzleManager = null;
 
@@ -27,6 +28,14 @@ public class RandomPuzzleGenerator : MonoBehaviour
 
     public void GenerateRandomPuzzle()
     {
+        // Decide aleatoriamente se as dimensões do puzzle mudarão
+        if (rand.NextDouble() >= 0.5)
+            layers = rand.Next(2, maxDimension + 1);
+        if (rand.NextDouble() >= 0.5)
+            lines = rand.Next(2, maxDimension + 1);
+        if (rand.NextDouble() >= 0.5)
+            columns = rand.Next(2, maxDimension + 1);
+
         solutionMatrix = new SolutionMatrix(layers, lines, columns);
 
         for (int k = 0; k < layers; k++)
