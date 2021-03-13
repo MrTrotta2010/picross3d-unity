@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 public class RotateCamera : MonoBehaviour
 {
@@ -8,12 +9,22 @@ public class RotateCamera : MonoBehaviour
     private Vector3 cameraDistance;
     private Vector3 puzzleOrigin;
 
-    private void Start()
+    private void OnEnable()
+    {
+        PuzzleManager.PuzzleOriginChanged += RecenterCamera;
+    }
+    
+    private void OnDisable()
+    {
+        PuzzleManager.PuzzleOriginChanged -= RecenterCamera;
+    }
+
+    private void Awake()
     {
         mainCamera = GetComponent<Camera>();
-        puzzleOrigin = puzzle.GetComponent<PuzzleManager>().GetPuzzleOrigin();
+        puzzleOrigin = new Vector3();
 
-        cameraDistance = puzzle.transform.position - mainCamera.transform.position;
+        cameraDistance = puzzleOrigin - mainCamera.transform.position;
         mainCamera.transform.position = puzzleOrigin;
         mainCamera.transform.Translate(new Vector3(0, 0, -cameraDistance.z));
     }
@@ -38,5 +49,13 @@ public class RotateCamera : MonoBehaviour
 
             previousPosition = mainCamera.ScreenToViewportPoint(Input.mousePosition);
         }
+    }
+
+    private void RecenterCamera(Vector3 newOrigin)
+    {
+        puzzleOrigin = newOrigin;
+
+        mainCamera.transform.position = puzzleOrigin;
+        mainCamera.transform.Translate(new Vector3(0, 0, -cameraDistance.z));
     }
 }

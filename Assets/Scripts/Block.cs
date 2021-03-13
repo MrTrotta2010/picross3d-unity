@@ -1,27 +1,25 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class Cube : MonoBehaviour
+public class Block : MonoBehaviour
 {
     private InputManager inputManager = null;
     private bool isPartOfSolution = false;
     private bool isPainted = false;
 
-    public delegate void OnWrongCubeBroken(GameObject cube);
-    public delegate void OnCorrectCubeBroken();
+    public delegate void OnWrongBlockBroken(GameObject cube);
+    public delegate void OnCorrectBlockBroken();
 
-    public delegate void OnCubePainted(GameObject cube);
-    public delegate void OnCubeUnpainted(GameObject cube);
+    public delegate void OnBlockPainted(GameObject cube);
+    public delegate void OnBlockUnpainted(GameObject cube);
 
-    // Jogador quebrou um cubo que era parte da solução
-    public static event OnWrongCubeBroken WrongCubeBroken;
-    // Jogador quebrou um cubo que não era parte da solução
-    public static event OnCorrectCubeBroken CorrectCubeBroken;
-    // Jogador pintou um cubo
-    public static event OnCubePainted CubePainted;
-    // Jogador "despintou" um cubo
-    public static event OnCubeUnpainted CubeUnpainted;
+    // Jogador quebrou um bloco que era parte da solução
+    public static event OnWrongBlockBroken WrongBlockBroken;
+    // Jogador quebrou um bloco que não era parte da solução
+    public static event OnCorrectBlockBroken CorrectBlockBroken;
+    // Jogador pintou um bloco
+    public static event OnBlockPainted BlockPainted;
+    // Jogador "despintou" um bloco
+    public static event OnBlockUnpainted BlockUnpainted;
 
     private void Awake()
     {
@@ -36,11 +34,11 @@ public class Cube : MonoBehaviour
             {
                 if (isPartOfSolution)
                 {
-                    WrongCubeBroken?.Invoke(gameObject);
+                    WrongBlockBroken?.Invoke(gameObject);
                 }
                 else
                 {
-                    CorrectCubeBroken?.Invoke();
+                    CorrectBlockBroken?.Invoke();
                     Destroy(gameObject);
                 }
             }
@@ -50,11 +48,11 @@ public class Cube : MonoBehaviour
             if (isPainted)
             {
                 isPainted = false;
-                CubeUnpainted?.Invoke(gameObject);
+                BlockUnpainted?.Invoke(gameObject);
             }
             else {
                 isPainted = true;
-                CubePainted?.Invoke(gameObject);
+                BlockPainted?.Invoke(gameObject);
             }
         }
     }

@@ -1117,6 +1117,51 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6975994299396204156, guid: 12183a19d97653b4185c18068e14730a, type: 3}
   m_PrefabInstance: {fileID: 6975994298092911094}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1942061150
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1942061152}
+  - component: {fileID: 1942061151}
+  m_Layer: 0
+  m_Name: Puzzle Builder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1942061151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1942061150}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b731249a48d12974ebefe259a938be20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  puzzleManager: {fileID: 1986519695}
+  highlightCorrectBlocks: 1
+--- !u!4 &1942061152
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1942061150}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.31958103, y: 0.92791605, z: 0.8717861}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1986519693
 GameObject:
   m_ObjectHideFlags: 0
@@ -1168,7 +1213,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5af33356ec82794c873edfa3629a069, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  highlightCorrectBlocks: 1
   highlightMaterial: {fileID: 2100000, guid: 26906bc8c95813c4e9010bd7f3a2f988, type: 2}
   brokenMaterial: {fileID: 2100000, guid: c9b78595a2ebd07438f69fc07afa8b71, type: 2}
   defaultMaterial: {fileID: 2100000, guid: ac04b12515af0fe468bb78ec21cb9716, type: 2}

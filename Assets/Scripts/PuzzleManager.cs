@@ -1,12 +1,8 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class PuzzleManager : MonoBehaviour
 {
-    // Destaca os blocos que fazem parte da solução do puzzle
-    public bool highlightCorrectBlocks = false;
-
     // Material do bloco destacado
     [SerializeField] private Material highlightMaterial = null;
     // Material de um bloco quebrado erroneamente
@@ -14,75 +10,96 @@ public class PuzzleManager : MonoBehaviour
     // Material default
     [SerializeField] private Material defaultMaterial = null;
 
-    // Prefab do cubo
-    [SerializeField] private GameObject cubePrefab = null;
+    // Prefab do bloco
+    [SerializeField] private GameObject blockPrefab = null;
 
-    private int[][][] puzzleSolutionMatrix; // Matriz de solução do puzzle
-    private Vector3 puzzleDimensions; // Dimensões em x, y e z do puzzle
+    private Puzzle3D puzzle; // Puzzle a ser resolvido
     private Vector3 puzzleOrigin; // Ponto central do puzzle;
-    private int cubesLeftToBreak; // A quantidade de cubos restantes a serem quebrados
+    private int blocksLeftToBreak; // A quantidade de blocos restantes a serem quebrados
 
-    private void Awake()
+    // Evento acionado sempre que a origem (centro) do puzzle se alterar
+    public delegate void OnPuzzleOriginChanged(Vector3 newOrigin);
+    public static event OnPuzzleOriginChanged PuzzleOriginChanged;
+
+    public void BuildPuzzleFromModel(bool highlightCorrectBlocks = false)
     {
         float minHeight, minWidth, minDepth, maxHeight, maxWidth, maxDepth;
 
-        // Recupera todos os cubos do puzzle
-        List<Transform> cubes = new List<Transform>(transform.childCount);
+        // Recupera todos os blocos do puzzle
+        List<Transform> blocks = new List<Transform>(transform.childCount);
 
         // Atualiza as altura, larguras e profundidades mínimas e máximas
         // e calcula as dimensões do puzzle
-        puzzleDimensions = CalculatePuzzleDimensions(cubes, out minHeight, out minWidth, out minDepth,
+        PuzzleDimensions puzzleDimensions = CalculatePuzzleDimensions(blocks, out minHeight, out minWidth, out minDepth,
                                                             out maxHeight, out maxWidth, out maxDepth);
 
-        // Calcula o centro do puzzle
+        // Calcula o centro do puzzle e invoca o evento
         puzzleOrigin = CalculatePuzzleOrigin(minHeight, minWidth, minDepth, maxHeight, maxWidth, maxDepth);
-        Debug.Log("Origem: " + puzzleOrigin);
+        PuzzleOriginChanged?.Invoke(puzzleOrigin);
 
         // Aloca a matriz de solução do puzzle
-        puzzleSolutionMatrix = AllocatePuzzleMatrix(puzzleDimensions);
+        puzzle = new Puzzle3D(puzzleDimensions);
 
-        // Preenche a matriz de solução do puzzle, criando os cubos extras e 
-        // atualizando a quantidade de cubos a serem quebrados
-        FillOutSolutionMatrix(cubes, maxHeight, minWidth, maxDepth);
+        // Preenche a matriz de solução do puzzle, criando os blocos extras e 
+        // atualizando a quantidade de blocos a serem quebrados
+        FillOutSolutionMatrix(blocks, maxHeight, minWidth, maxDepth, highlightCorrectBlocks);
 
         PrintMatrixLayer(0);
     }
 
+    public void BuildModelFromPuzzle(Puzzle3D puzzle, bool highlightCorrectBlocks = false)
+    {
+        this.puzzle = puzzle;
+
+        // Deleta todos os blocos pre-existentes
+        foreach (Transform child in transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // Cria todos os blocos necessários e destaca os que fazem parte da solução
+        CreateBlocks(highlightCorrectBlocks);
+
+        // Calcula o centro do puzzle e invoca o evento
+        puzzleOrigin = CalculatePuzzleOrigin(-puzzle.Dimensions.lines + 1, 0, -puzzle.Dimensions.layers + 1, 0, puzzle.Dimensions.columns - 1, 0);
+        PuzzleOriginChanged?.Invoke(puzzleOrigin);
+    }
+
     private void OnEnable()
     {
-        Cube.CorrectCubeBroken += DecreaseCubesLeft;
-        Cube.WrongCubeBroken += MistakeMade;
-        Cube.CubePainted += PaintCube;
-        Cube.CubeUnpainted += UnpaintCube;
+        Block.CorrectBlockBroken += DecreaseBlocksLeft;
+        Block.WrongBlockBroken += MistakeMade;
+        Block.BlockPainted += PaintBlock;
+        Block.BlockUnpainted += UnpaintBlock;
     }
 
     private void OnDisable()
     {
-        Cube.CorrectCubeBroken -= DecreaseCubesLeft;
-        Cube.WrongCubeBroken -= MistakeMade;
-        Cube.CubePainted -= PaintCube;
-        Cube.CubeUnpainted -= UnpaintCube;
+        Block.CorrectBlockBroken -= DecreaseBlocksLeft;
+        Block.WrongBlockBroken -= MistakeMade;
+        Block.BlockPainted -= PaintBlock;
+        Block.BlockUnpainted -= UnpaintBlock;
     }
 
     // Calcula as dimensões do puzzle
-    private Vector3 CalculatePuzzleDimensions(List<Transform> cubes, out float minHeight, out float minWidth, out float minDepth,
+    private PuzzleDimensions CalculatePuzzleDimensions(List<Transform> blocks, out float minHeight, out float minWidth, out float minDepth,
                                                                 out float maxHeight, out float maxWidth, out float maxDepth)
     {
         minHeight = minWidth = minDepth = maxHeight = maxWidth = maxDepth = 0;
 
-        for (int i = 0; i < cubes.Capacity; i++)
+        for (int i = 0; i < blocks.Capacity; i++)
         {
-            cubes.Add(transform.GetChild(i));
+            blocks.Add(transform.GetChild(i));
 
-            if (cubes[i].position.y > maxHeight) maxHeight = cubes[i].position.y;
-            if (cubes[i].position.y < minHeight) minHeight = cubes[i].position.y;
-            if (cubes[i].position.x > maxWidth) maxWidth = cubes[i].position.x;
-            if (cubes[i].position.x < minWidth) minWidth = cubes[i].position.x;
-            if (cubes[i].position.z > maxDepth) maxDepth = cubes[i].position.z;
-            if (cubes[i].position.z < minDepth) minDepth = cubes[i].position.z;
+            if (blocks[i].position.y > maxHeight) maxHeight = blocks[i].position.y;
+            if (blocks[i].position.y < minHeight) minHeight = blocks[i].position.y;
+            if (blocks[i].position.x > maxWidth) maxWidth = blocks[i].position.x;
+            if (blocks[i].position.x < minWidth) minWidth = blocks[i].position.x;
+            if (blocks[i].position.z > maxDepth) maxDepth = blocks[i].position.z;
+            if (blocks[i].position.z < minDepth) minDepth = blocks[i].position.z;
         }
 
-        return new Vector3(maxWidth - minWidth + 1, maxHeight - minHeight + 1, maxDepth - minDepth + 1);
+        return new PuzzleDimensions((int)(maxDepth - minDepth + 1), (int)(maxHeight - minHeight + 1), (int)(maxWidth - minWidth + 1));
     }
 
     private Vector3 CalculatePuzzleOrigin(float minHeight, float minWidth, float minDepth,
@@ -91,34 +108,15 @@ public class PuzzleManager : MonoBehaviour
         return new Vector3((maxWidth + minWidth) / 2, (maxHeight + minHeight) / 2, (maxDepth + minDepth) / 2);
     }
 
-    // Aloca a matriz tridimensional que contém a solução do puzzle
-    private int[][][] AllocatePuzzleMatrix(Vector3 puzzleDimensions)
+    // Atribui cada um dos blocos pré-existentes a uma posição da matriz tridimensional e os torna parte da solução
+    private void FillOutSolutionMatrix(List<Transform> blocks, float maxHeight, float minWidth, float maxDepth, bool highlightCorrectBlocks)
     {
-        int[][][] matrix = new int[(int)puzzleDimensions.z][][];
-        for (int i = 0; i < puzzleDimensions.z; i++)
-        {
-            matrix[i] = new int[(int)puzzleDimensions.y][];
-            for (int j = 0; j < puzzleDimensions.y; j++)
-            {
-                matrix[i][j] = new int[(int)puzzleDimensions.x];
-                for (int k = 0; k < puzzleDimensions.x; k++)
-                {
-                    matrix[i][j][k] = 0;
-                }
-            }
-        }
-        return matrix;
-    }
+        blocksLeftToBreak = 0;
 
-    // Atribui cada um dos cubos pré-existentes a uma posição da matriz tridimensional e os torna parte da solução
-    private void FillOutSolutionMatrix(List<Transform> cubes, float maxHeight, float minWidth, float maxDepth)
-    {
-        cubesLeftToBreak = 0;
-
-        // Ordena a lista de cubos decrescentemente por coordenada z
-        // Cubos com mesmo z são ordenados decrescentemente por coordenada z
-        // Cubos com mesmo y são ordenados crescentemente por coordenada x
-        cubes.Sort(delegate (Transform t1, Transform t2)
+        // Ordena a lista de blocos decrescentemente por coordenada z
+        // blocos com mesmo z são ordenados decrescentemente por coordenada z
+        // blocos com mesmo y são ordenados crescentemente por coordenada x
+        blocks.Sort(delegate (Transform t1, Transform t2)
         {
             var index1 = t1.position.z.CompareTo(t2.position.z);
             if (index1 == 0)
@@ -140,54 +138,88 @@ public class PuzzleManager : MonoBehaviour
         });
 
         int i = 0, k = 0;
-        float previousY = cubes[0].position.y, previousZ = cubes[0].position.z;
+        float previousY = blocks[0].position.y, previousZ = blocks[0].position.z;
 
-        // Associa cada cubo da solução a uma posição da matriz de solução
-        // e marca o cubo como parte da solução
-        for (int c = 0; c < cubes.Count; c++) // C++ rsrsrs
+        // Associa cada bloco da solução a uma posição da matriz de solução
+        // e marca o bloco como parte da solução
+        for (int c = 0; c < blocks.Count; c++) // C++ rsrsrs
         {
             //// Quando o z se alterar, muda de linha e atualiza o z anterior
-            //if (cubes[c].position.y != previousY)
+            //if (blocks[c].position.y != previousY)
             //{
-            //    k += (int)(previousZ - cubes[c].position.z);
-            //    previousZ = cubes[c].position.z;
+            //    k += (int)(previousZ - blocks[c].position.z);
+            //    previousZ = blocks[c].position.z;
             //}
             //// Quando o y se alterar, muda de linha e atualiza o y anterior
-            //if (cubes[c].position.y != previousY)
+            //if (blocks[c].position.y != previousY)
             //{
-            //    i += (int)(previousY - cubes[c].position.y);
-            //    previousY = cubes[c].position.y;
+            //    i += (int)(previousY - blocks[c].position.y);
+            //    previousY = blocks[c].position.y;
             //}
 
-            // Calcula a posição e adiciona o cubo à solução
-            i = (int)(maxHeight - cubes[c].position.y);
-            int j = (int)(cubes[c].position.x - minWidth);
-            k = (int)(maxDepth - cubes[c].position.z);
-            // Debug.Log(cubes[c].gameObject.name + " - i: " + i + ", j: " + j + ", k: " + k);
-            puzzleSolutionMatrix[k][i][j] = 1;
-            cubes[c].GetComponent<Cube>().SetPartOfSolution(true);
+            // Calcula a posição e adiciona o bloco à solução
+            i = (int)(maxHeight - blocks[c].position.y);
+            int j = (int)(blocks[c].position.x - minWidth);
+            k = (int)(maxDepth - blocks[c].position.z);
+            // Debug.Log(blocks[c].gameObject.name + " - i: " + i + ", j: " + j + ", k: " + k);
+            puzzle.SolutionMatrix[k][i][j] = 1;
+            blocks[c].GetComponent<Block>().SetPartOfSolution(true);
 
             if (highlightCorrectBlocks)
             {
-                cubes[c].GetComponent<MeshRenderer>().material = highlightMaterial;
+                blocks[c].GetComponent<MeshRenderer>().material = highlightMaterial;
             }
         }
 
-        // Cria um novo cubo para cada posição da matriz de solução
+        // Cria um novo bloco para cada posição da matriz de solução
         // não pertencente a solução final e ajusta sua posição no puzzle
-        for (k = 0; k < puzzleDimensions.z; k++)
+        for (k = 0; k < puzzle.Dimensions.layers; k++)
         {
-            for (i = 0; i < puzzleDimensions.y; i++)
+            for (i = 0; i < puzzle.Dimensions.lines; i++)
             {
-                for (int j = 0; j < puzzleDimensions.x; j++)
+                for (int j = 0; j < puzzle.Dimensions.columns; j++)
                 {
-                    if (puzzleSolutionMatrix[k][i][j] == 0)
+                    if (puzzle.SolutionMatrix[k][i][j] == 0)
                     {
                         Vector3 position = new Vector3(j + minWidth, maxHeight - i, maxDepth - k);
-                        GameObject newCube = Instantiate(cubePrefab, position, Quaternion.identity);
-                        newCube.GetComponent<Cube>().SetPartOfSolution(false);
-                        cubesLeftToBreak++;
+                        GameObject newBlock = Instantiate(blockPrefab, position, Quaternion.identity);
+                        newBlock.GetComponent<Block>().SetPartOfSolution(false);
+                        blocksLeftToBreak++;
                     }
+                }
+            }
+        }
+    }
+
+    private void CreateBlocks(bool highlightCorrectBlocks)
+    {
+        blocksLeftToBreak = 0;
+
+        // Instancia um bloco para cada posição da matriz de solução
+        for (int k = 0; k < puzzle.Dimensions.layers; k++)
+        {
+            for (int i = 0; i < puzzle.Dimensions.lines; i++)
+            {
+                for (int j = 0; j < puzzle.Dimensions.columns; j++)
+                {
+                    Vector3 position = new Vector3(j, -i, -k);
+                    GameObject newBlock = Instantiate(blockPrefab, position, Quaternion.identity);
+
+                    // Adiciona o bloco como parte da solução, se ele for
+                    if (puzzle.SolutionMatrix[k][i][j] == 1)
+                    {
+                        newBlock.GetComponent<Block>().SetPartOfSolution(true);
+                        if (highlightCorrectBlocks)
+                            newBlock.GetComponent<MeshRenderer>().material = highlightMaterial;
+                    }
+                    else
+                    {
+                        newBlock.GetComponent<Block>().SetPartOfSolution(false);
+                        blocksLeftToBreak++;
+                    }
+
+                    // Torna o novo bloco filho do puzzle
+                    newBlock.transform.SetParent(transform);
                 }
             }
         }
@@ -196,18 +228,18 @@ public class PuzzleManager : MonoBehaviour
     private void PrintMatrixLayer(int layer)
     {
         string str = "[";
-        for (int i = 0; i < puzzleDimensions.y; i++)
+        for (int i = 0; i < puzzle.Dimensions.lines; i++)
         {
-            for (int j = 0; j < puzzleDimensions.x; j++)
+            for (int j = 0; j < puzzle.Dimensions.columns; j++)
             {
-                str += puzzleSolutionMatrix[layer][i][j];
-                if (j < puzzleDimensions.x - 1)
+                str += puzzle.SolutionMatrix[layer][i][j];
+                if (j < puzzle.Dimensions.columns - 1)
                 {
                     str += ", ";
                 }
                 else
                 {
-                    if (i < puzzleDimensions.y - 1)
+                    if (i < puzzle.Dimensions.lines - 1)
                     {
                         str += "]\n[";
                     }
@@ -227,10 +259,10 @@ public class PuzzleManager : MonoBehaviour
         cube.GetComponent<MeshRenderer>().material = brokenMaterial;
     }
 
-    private void DecreaseCubesLeft()
+    private void DecreaseBlocksLeft()
     {
-        cubesLeftToBreak--;
-        if (cubesLeftToBreak == 0)
+        blocksLeftToBreak--;
+        if (blocksLeftToBreak == 0)
         {
             Debug.Log("Venceu!! :)");
         }
@@ -241,12 +273,12 @@ public class PuzzleManager : MonoBehaviour
         return puzzleOrigin;
     }
 
-    public void PaintCube(GameObject cube)
+    public void PaintBlock(GameObject cube)
     {
         cube.GetComponent<MeshRenderer>().material = brokenMaterial;
     }
 
-    public void UnpaintCube(GameObject cube)
+    public void UnpaintBlock(GameObject cube)
     {
         cube.GetComponent<MeshRenderer>().material = defaultMaterial;
     }
